@@ -9,6 +9,7 @@ Timezone: Asia/Kolkata (IST, UTC+5:30, no DST)
 Transport: Green API (no browser required)
 """
 
+import json
 import os
 import random
 import threading
@@ -16,7 +17,27 @@ import time
 import logging
 import requests
 from datetime import date, datetime, timedelta, timezone
-from job_store import get_state, set_state
+
+# ── Simple file-based state (replaces job_store DB dependency) ─────────────────
+_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schedule_state.json")
+
+def get_state(key: str, default=None):
+    try:
+        return json.loads(open(_STATE_FILE).read()).get(key, default)
+    except Exception:
+        return default
+
+def set_state(key: str, value) -> None:
+    try:
+        try:
+            data = json.loads(open(_STATE_FILE).read())
+        except Exception:
+            data = {}
+        data[key] = value
+        with open(_STATE_FILE, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"set_state failed: {e}")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
